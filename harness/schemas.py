@@ -28,6 +28,11 @@ class PurchaseRequest(BaseModel):
     category: str
     merchant: str
     price: float = Field(gt=0)
+
+    # Optional order details used by anomaly checks.
+    quantity: int = Field(default=1, ge=1)
+    perishable: bool = Field(default=False)
+
     timestamp: datetime
     mandate: Mandate
 
