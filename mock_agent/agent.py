@@ -16,19 +16,24 @@ mandate = Mandate(
     expires_at=datetime(2026, 12, 31),
 )
 
-
 def make_request(rid, item, category, price, qty=1, perishable=False,
                  query="a laptop for coding", m=None):
+    used = m or mandate.model_copy(update={"mandate_id": f"m-{rid}"})
     return PurchaseRequest(
         request_id=rid, user_id="u1", user_query=query, item=item,
         category=category, merchant="shop.example", price=price,
         quantity=qty, perishable=perishable,
-        timestamp=datetime(2026, 11, 26), mandate=m or mandate,
+        timestamp=datetime(2026, 11, 26), mandate=used,
     )
 expired_mandate = Mandate(
     user_id="u1", max_per_purchase=1000, total_budget=2000,
     allowed_categories=["electronics"], expires_at=datetime(2026, 11, 1),
 )
+budget_mandate = Mandate(
+    user_id="u1", mandate_id="mB", max_per_purchase=1000, total_budget=10,
+    allowed_categories=["groceries"], expires_at=datetime(2026, 12, 31),
+)
+attempts_mandate = mandate.model_copy(update={"mandate_id": "mA"})
 
 # (request, expected decision)
 SCENARIOS = [
@@ -39,8 +44,14 @@ SCENARIOS = [
     (make_request("r5", "Body wash", "toiletries", 20, qty=4), "approve"),
     (make_request("r6", "Body wash", "toiletries", 40, qty=8), "reauth"),  
     (make_request("r7", "Body wash", "toiletries", 5, qty=1), "reauth"),   
-    (make_request("r8", "Body wash", "toiletries", 20, qty=4), "approve"),
+    (make_request("r8", "Body wash", "toiletries", 20, qty=4), "reauth"),
     (make_request("r9", "Milk", "groceries", 6, qty=2, perishable=True), "approve"),
+    (make_request("r10", "Milk", "groceries", 6, qty=2, perishable=True, m=budget_mandate), "approve"),
+    (make_request("r11", "Milk", "groceries", 6, qty=2, perishable=True, m=budget_mandate), "reauth"),
+    (make_request("r12", "MacBook Pro", "electronics", 1400, m=attempts_mandate), "reauth"),
+    (make_request("r13", "MacBook Pro", "electronics", 1400, m=attempts_mandate), "reauth"),
+    (make_request("r14", "MacBook Pro", "electronics", 1400, m=attempts_mandate), "reauth"),
+    (make_request("r15", "MacBook Pro", "electronics", 1400, m=attempts_mandate), "block"),
 ]
 
 

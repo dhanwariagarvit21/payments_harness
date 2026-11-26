@@ -1,6 +1,5 @@
 from datetime import datetime
 from enum import Enum
-
 from pydantic import BaseModel, Field
 
 
@@ -12,6 +11,7 @@ class Decision(str, Enum):
 
 class Mandate(BaseModel):
     """What the user authorized the agent to do."""
+    mandate_id: str = "default"
     user_id: str
     max_per_purchase: float
     total_budget: float
@@ -23,13 +23,11 @@ class PurchaseRequest(BaseModel):
     """What the agent sends to the harness."""
     request_id: str
     user_id: str
-    user_query: str          # what the user originally asked the agent to find
+    user_query: str        
     item: str
     category: str
     merchant: str
     price: float = Field(gt=0)
-
-    # Optional order details used by anomaly checks.
     quantity: int = Field(default=1, ge=1)
     perishable: bool = Field(default=False)
 

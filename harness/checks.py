@@ -79,3 +79,9 @@ def check_frequency(req: PurchaseRequest) -> Signal:
     recent = sum(1 for r in rows if r["ts"] >= since)
     return Signal(name="purchase_frequency", triggered=recent + 1 > 1.5 * typical, weight=1.0,
                   detail=f"{recent} in last 30 days, typical {typical:.1f} per month")
+def check_budget(req: PurchaseRequest) -> Signal:
+    mandate_id = getattr(req.mandate, "mandate_id", "default")
+    spent = db.mandate_spent(mandate_id)
+    total = req.mandate.total_budget
+    return Signal(name="budget_exceeded", triggered=spent + req.price > total, weight=1.0,
+                  detail=f"spent {spent} + this {req.price} vs budget {total}")

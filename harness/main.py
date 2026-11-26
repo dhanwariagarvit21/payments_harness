@@ -9,7 +9,11 @@ db.init_db()
 
 @app.post("/evaluate", response_model=DecisionResponse)
 def evaluate(req: PurchaseRequest):
+    mandate_id = getattr(req.mandate, "mandate_id", "default")
     result = decide(req)
+    db.record_attempt(mandate_id, req.request_id, result.decision.value)
     if result.decision == Decision.APPROVE:
         charge(req.user_id, req.price, req.request_id)
+        db.record_purchase(req)
+        db.record_spend(mandate_id, req.request_id, req.price)
     return result

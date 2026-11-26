@@ -13,12 +13,24 @@ def init_db(reset: bool = False):
     conn = _connect()
     if reset:
         conn.execute("DROP TABLE IF EXISTS purchases")
+        conn.execute("DROP TABLE IF EXISTS ledger")
+        conn.execute("DROP TABLE IF EXISTS attempts")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS purchases (
             id INTEGER PRIMARY KEY,
             user_id TEXT, item TEXT, category TEXT,
             quantity INTEGER, perishable INTEGER,
             price REAL, ts TEXT
+        )""")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS ledger (
+            id INTEGER PRIMARY KEY,
+            mandate_id TEXT, request_id TEXT, amount REAL
+        )""")
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS attempts (
+            id INTEGER PRIMARY KEY,
+            mandate_id TEXT, request_id TEXT, decision TEXT
         )""")
     conn.commit()
     conn.close()
@@ -50,3 +62,33 @@ def category_rows(user_id, category):
     ).fetchall()
     conn.close()
     return rows
+def record_spend(mandate_id, request_id, amount):
+    conn = _connect()
+    conn.execute("INSERT INTO ledger (mandate_id, request_id, amount) VALUES (?, ?, ?)",
+                 (mandate_id, request_id, amount))
+    conn.commit()
+    conn.close()
+
+
+def mandate_spent(mandate_id):
+    conn = _connect()
+    total = conn.execute("SELECT COALESCE(SUM(amount), 0) FROM ledger WHERE mandate_id = ?",
+                         (mandate_id,)).fetchone()[0]
+    conn.close()
+    return total
+
+
+def record_attempt(mandate_id, request_id, decision):
+    conn = _connect()
+    conn.execute("INSERT INTO attempts (mandate_id, request_id, decision) VALUES (?, ?, ?)",
+                 (mandate_id, request_id, decision))
+    conn.commit()
+    conn.close()
+
+
+def failed_attempts(mandate_id):
+    conn = _connect()
+    n = conn.execute("SELECT COUNT(*) FROM attempts WHERE mandate_id = ? AND decision != 'approve'",
+                     (mandate_id,)).fetchone()[0]
+    conn.close()
+    return n
